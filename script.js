@@ -16,30 +16,14 @@ if (menuBtn && mobileMenu) {
 
 // Objeto para almacenar la información de la cita
 let bookingData = {
-    service: '',
+    services: [], // Lista de servicios seleccionados
     price: 0,
-    barber: 'Lewis Habano',
+    barber: '',
     date: '',
     time: '',
     clientName: '',
     clientPhone: ''
 };
-
-// Obtener el precio desde el elemento seleccionado
-function getServicePrice(radioElement) {
-    if (!radioElement) return 0;
-    let price = parseFloat(radioElement.getAttribute('data-price'));
-    
-    if (isNaN(price) || price <= 0) {
-        const label = radioElement.closest('label') || radioElement.parentElement;
-        if (label) {
-            const text = label.textContent || '';
-            const match = text.match(/\$\s*(\d+(\.\d+)?)/) || text.match(/(\d+(\.\d+)?)/);
-            if (match) price = parseFloat(match[1]) || 0;
-        }
-    }
-    return price;
-}
 
 // Actualizar el indicador de los pasos
 function updateStepIndicators(stepNumber) {
@@ -67,25 +51,83 @@ function updateStepIndicators(stepNumber) {
     }
 }
 
-// Navegación entre pasos
+// Calcular servicios y precios seleccionados en tiempo real
+function updateBookingSummary() {
+    const checkedServices = document.querySelectorAll('input[name="service"]:checked');
+    bookingData.services = [];
+    let totalPrice = 0;
+
+    checkedServices.forEach(checkbox => {
+        bookingData.services.push(checkbox.value);
+        let price = parseFloat(checkbox.getAttribute('data-price')) || 0;
+        totalPrice += price;
+    });
+
+    bookingData.price = totalPrice;
+
+    // Actualizar previsualización en paso 1
+    const step1Total = document.getElementById('step1-total-price');
+    if (step1Total) {
+        step1Total.textContent = `$${totalPrice.toFixed(2)}`;
+    }
+
+    // Actualizar barbero seleccionado si lo hay
+    const activeBarber = document.querySelector('input[name="barber"]:checked');
+    if (activeBarber) {
+        bookingData.barber = activeBarber.value;
+    }
+
+    // Actualizar fechas y horas si están ingresadas
+    const dateVal = document.getElementById('booking-date').value;
+    const timeVal = document.getElementById('booking-time').value;
+    if (dateVal) bookingData.date = dateVal;
+    if (timeVal) bookingData.time = timeVal;
+
+    // Actualizar campos del resumen final (Paso 4)
+    const sServices = document.getElementById('summary-services');
+    const sBarber = document.getElementById('summary-barber');
+    const sDatetime = document.getElementById('summary-datetime');
+    const sPrice = document.getElementById('summary-price');
+
+    if (sServices) {
+        sServices.textContent = bookingData.services.length > 0 ? bookingData.services.join(', ') : 'Ningún servicio seleccionado';
+    }
+    if (sBarber) {
+        sBarber.textContent = bookingData.barber || 'No seleccionado';
+    }
+    if (sDatetime) {
+        sDatetime.textContent = (bookingData.date && bookingData.time) ? `${bookingData.date} a las ${bookingData.time}` : '-';
+    }
+    if (sPrice) {
+        sPrice.textContent = `$${bookingData.price.toFixed(2)}`;
+    }
+}
+
+// Navegación entre pasos con validaciones estrictas
 function nextStep(stepNumber) {
     if (stepNumber === 2) {
-        const selectedService = document.querySelector('input[name="service"]:checked');
-        if (!selectedService) {
-            alert('Por favor selecciona un servicio para continuar.');
+        // Validar que al menos un servicio esté seleccionado
+        const checkedServices = document.querySelectorAll('input[name="service"]:checked');
+        if (checkedServices.length === 0) {
+            alert('Por favor selecciona al menos un servicio para continuar.');
             return;
         }
-        bookingData.service = selectedService.value;
-        bookingData.price = getServicePrice(selectedService);
+        updateBookingSummary();
     } else if (stepNumber === 3) {
+        // Validar que el barbero sea obligatorio y esté seleccionado
         const selectedBarber = document.querySelector('input[name="barber"]:checked');
-        if (selectedBarber) bookingData.barber = selectedBarber.value;
+        if (!selectedBarber) {
+            alert('Por favor selecciona tu barbero para poder avanzar.');
+            return;
+        }
+        bookingData.barber = selectedBarber.value;
     } else if (stepNumber === 4) {
+        // Validar fecha y hora
         const dateInput = document.getElementById('booking-date').value;
         const timeInput = document.getElementById('booking-time').value;
         
         if (!dateInput || !timeInput) {
-            alert('Por favor selecciona la fecha y la hora.');
+            alert('Por favor selecciona la fecha y la hora de tu cita.');
             return;
         }
         bookingData.date = dateInput;
@@ -100,61 +142,42 @@ function prevStep(stepNumber) {
     updateStepIndicators(stepNumber);
 }
 
-// Seleccionar servicio rápido
+// Seleccionar servicio rápido desde la carta general
 function selectService(serviceName, price) {
-    bookingData.service = serviceName;
-    bookingData.price = parseFloat(price) || 0;
-    
-    const radios = document.querySelectorAll('input[name="service"]');
-    radios.forEach(radio => {
-        if (radio.value === serviceName) {
-            radio.checked = true;
-            bookingData.price = getServicePrice(radio);
+    const checkboxes = document.querySelectorAll('input[name="service"]');
+    checkboxes.forEach(cb => {
+        if (cb.value === serviceName) {
+            cb.checked = true;
         }
     });
 
+    updateBookingSummary();
     nextStep(2);
+    
     const reservasSection = document.getElementById('reservas');
     if (reservasSection) reservasSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Seleccionar barbero rápido
+// Seleccionar barbero rápido desde la sección de equipo
 function selectBarber(barberName) {
-    bookingData.barber = barberName;
-    const serviceSelected = document.querySelector('input[name="service"]:checked');
-    
-    if (!serviceSelected) {
+    const barberRadios = document.querySelectorAll('input[name="barber"]');
+    barberRadios.forEach(radio => {
+        if (radio.value === barberName) {
+            radio.checked = true;
+            bookingData.barber = barberName;
+        }
+    });
+
+    const checkedServices = document.querySelectorAll('input[name="service"]:checked');
+    if (checkedServices.length === 0) {
         nextStep(1);
     } else {
-        bookingData.service = serviceSelected.value;
-        bookingData.price = getServicePrice(serviceSelected);
+        updateBookingSummary();
         nextStep(3);
     }
     
     const reservasSection = document.getElementById('reservas');
     if (reservasSection) reservasSection.scrollIntoView({ behavior: 'smooth' });
-}
-
-// Actualizar resumen en tiempo real
-function updateBookingSummary() {
-    const sService = document.getElementById('summary-service');
-    const sDatetime = document.getElementById('summary-datetime');
-    const sPrice = document.getElementById('summary-price');
-
-    const activeService = document.querySelector('input[name="service"]:checked');
-    const dateVal = document.getElementById('booking-date').value;
-    const timeVal = document.getElementById('booking-time').value;
-
-    if (activeService) {
-        bookingData.service = activeService.value;
-        bookingData.price = getServicePrice(activeService);
-    }
-    if (dateVal) bookingData.date = dateVal;
-    if (timeVal) bookingData.time = timeVal;
-
-    if (sService) sService.textContent = bookingData.service || '-';
-    if (sDatetime) sDatetime.textContent = (bookingData.date && bookingData.time) ? `${bookingData.date} - ${bookingData.time}` : '-';
-    if (sPrice) sPrice.textContent = bookingData.price ? `$${bookingData.price.toFixed(2)}` : '-';
 }
 
 // Confirmar reserva e integrar con WhatsApp
@@ -165,7 +188,7 @@ function confirmBooking(event) {
     const phoneInput = document.getElementById('client-phone');
 
     if (!nameInput || !phoneInput || !nameInput.value.trim() || !phoneInput.value.trim()) {
-        alert('Por favor ingresa tu nombre y teléfono.');
+        alert('Por favor ingresa tu nombre y teléfono de contacto.');
         return;
     }
 
@@ -174,13 +197,14 @@ function confirmBooking(event) {
 
     // Rellenar pantalla de éxito
     document.getElementById('suc-name').textContent = bookingData.clientName;
-    document.getElementById('suc-service').textContent = bookingData.service;
+    document.getElementById('suc-services').textContent = bookingData.services.join(', ');
     document.getElementById('suc-barber').textContent = bookingData.barber;
     document.getElementById('suc-datetime').textContent = `${bookingData.date} a las ${bookingData.time}`;
     document.getElementById('suc-price').textContent = `$${bookingData.price.toFixed(2)}`;
 
-    // Construir mensaje de WhatsApp
-    const whatsappMessage = `¡Hola Mendez Barber! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicio:* ${bookingData.service}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
+    // Construir mensaje detallado para WhatsApp
+    const servicesListStr = bookingData.services.join(', ');
+    const whatsappMessage = `¡Hola Mendez Barber! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicios:* ${servicesListStr}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Monto Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
     
     const whatsappUrl = `https://wa.me/584128674324?text=${whatsappMessage}`;
     const whatsappBtn = document.getElementById('whatsapp-btn');
@@ -192,7 +216,7 @@ function confirmBooking(event) {
     successScreen.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Reiniciar reserva
+// Reiniciar formulario de reserva
 function resetBooking() {
     const bookingForm = document.getElementById('booking-form');
     bookingForm.reset();
@@ -200,14 +224,15 @@ function resetBooking() {
     document.getElementById('success-screen').classList.add('hidden');
     
     bookingData = {
-        service: '',
+        services: [],
         price: 0,
-        barber: 'Lewis Habano',
+        barber: '',
         date: '',
         time: '',
         clientName: '',
         clientPhone: ''
     };
     
+    updateBookingSummary();
     nextStep(1);
 }
