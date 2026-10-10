@@ -180,7 +180,7 @@ function confirmBooking(event) {
     document.getElementById('suc-price').textContent = `$${bookingData.price.toFixed(2)}`;
 
     // Construir mensaje de WhatsApp
-    const whatsappMessage = `¡Hola Brothers Barber Shop! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicio:* ${bookingData.service}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
+    const whatsappMessage = `¡Hola Mendez Barber! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicio:* ${bookingData.service}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
     
     const whatsappUrl = `https://wa.me/584128674324?text=${whatsappMessage}`;
     const whatsappBtn = document.getElementById('whatsapp-btn');
