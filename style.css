@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --gold: #d4af37;
+    --gold-light: #f3e5ab;
+    --gold-dark: #aa8821;
+    --dark-bg: #09090b;
+    --card-bg: #121215;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--dark-bg);
+    color: #e5e7eb;
+}
+
+h1, h2, h3, h4, .font-serif {
+    font-family: 'Cinzel', 'Playfair Display', serif;
+}
+
+/* Texto Gradiente Dorado */
+.gold-text-gradient {
+    background: linear-gradient(135deg, #FFF 0%, #F3E5AB 30%, #D4AF37 70%, #AA8821 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Botón Estilo Dorado Premium */
+.btn-gold {
+    background: linear-gradient(135deg, #F3E5AB 0%, #D4AF37 50%, #AA8821 100%);
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
+    transition: all 0.3s ease;
+}
+
+.btn-gold:hover {
+    box-shadow: 0 6px 25px rgba(212, 175, 55, 0.45);
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+}
+
+/* Tarjeta con destello dorado suave */
+.card-gold-glow {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+    transition: all 0.3s ease;
+}
+
+.card-gold-glow:hover {
+    box-shadow: 0 15px 35px -10px rgba(212, 175, 55, 0.2);
+}
+
+/* Personalización del Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #222225;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
+}
