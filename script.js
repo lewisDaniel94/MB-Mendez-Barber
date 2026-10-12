@@ -14,9 +14,25 @@ if (menuBtn && mobileMenu) {
     });
 }
 
+// Funciones para controlar el Modal Personalizado
+function showCustomModal(title, message) {
+    const modal = document.getElementById('custom-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+
+    if (modalTitle) modalTitle.textContent = title;
+    if (modalMessage) modalMessage.textContent = message;
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeCustomModal() {
+    const modal = document.getElementById('custom-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 // Objeto para almacenar la información de la cita
 let bookingData = {
-    services: [], // Lista de servicios seleccionados
+    services: [], 
     price: 0,
     barber: '',
     date: '',
@@ -65,25 +81,21 @@ function updateBookingSummary() {
 
     bookingData.price = totalPrice;
 
-    // Actualizar previsualización en paso 1
     const step1Total = document.getElementById('step1-total-price');
     if (step1Total) {
         step1Total.textContent = `$${totalPrice.toFixed(2)}`;
     }
 
-    // Actualizar barbero seleccionado si lo hay
     const activeBarber = document.querySelector('input[name="barber"]:checked');
     if (activeBarber) {
         bookingData.barber = activeBarber.value;
     }
 
-    // Actualizar fechas y horas si están ingresadas
     const dateVal = document.getElementById('booking-date').value;
     const timeVal = document.getElementById('booking-time').value;
     if (dateVal) bookingData.date = dateVal;
     if (timeVal) bookingData.time = timeVal;
 
-    // Actualizar campos del resumen final (Paso 4)
     const sServices = document.getElementById('summary-services');
     const sBarber = document.getElementById('summary-barber');
     const sDatetime = document.getElementById('summary-datetime');
@@ -103,35 +115,65 @@ function updateBookingSummary() {
     }
 }
 
-// Navegación entre pasos con validaciones estrictas
-function nextStep(stepNumber) {
+// Navegación entre pasos con verificación previa en el Paso 3
+async function nextStep(stepNumber) {
     if (stepNumber === 2) {
-        // Validar que al menos un servicio esté seleccionado
         const checkedServices = document.querySelectorAll('input[name="service"]:checked');
         if (checkedServices.length === 0) {
-            alert('Por favor selecciona al menos un servicio para continuar.');
+            showCustomModal('Selección Requerida', 'Por favor selecciona al menos un servicio para continuar con tu reserva.');
             return;
         }
         updateBookingSummary();
     } else if (stepNumber === 3) {
-        // Validar que el barbero sea obligatorio y esté seleccionado
         const selectedBarber = document.querySelector('input[name="barber"]:checked');
         if (!selectedBarber) {
-            alert('Por favor selecciona tu barbero para poder avanzar.');
+            showCustomModal('Barbero Requerido', 'Por favor selecciona tu barbero preferido para poder avanzar.');
             return;
         }
         bookingData.barber = selectedBarber.value;
     } else if (stepNumber === 4) {
-        // Validar fecha y hora
+        // Validar fecha y hora seleccionada
         const dateInput = document.getElementById('booking-date').value;
         const timeInput = document.getElementById('booking-time').value;
         
         if (!dateInput || !timeInput) {
-            alert('Por favor selecciona la fecha y la hora de tu cita.');
+            showCustomModal('Fecha y Hora Requeridas', 'Por favor selecciona la fecha y el horario deseado para tu cita.');
             return;
         }
         bookingData.date = dateInput;
         bookingData.time = timeInput;
+
+        // VERIFICAR DISPONIBILIDAD EN FIREBASE ANTES DE ENTRAR AL PASO 4
+        try {
+            const db = window.db;
+            if (!db) {
+                throw new Error("Base de datos no inicializada.");
+            }
+
+            const { collection, query, where, getDocs } = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js");
+
+            const q = query(
+                collection(db, "citas"),
+                where("barber", "==", bookingData.barber),
+                where("date", "==", bookingData.date),
+                where("time", "==", bookingData.time)
+            );
+
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                showCustomModal(
+                    'Horario No Disponible', 
+                    `Lo sentimos, el barbero ${bookingData.barber} ya tiene una cita reservada para el ${bookingData.date} a las ${bookingData.time}. Por favor, selecciona otro horario u otro barbero.`
+                );
+                return; // Detiene el avance al paso 4
+            }
+        } catch (error) {
+            console.error("Error al verificar disponibilidad: ", error);
+            showCustomModal('Error de Conexión', 'Ocurrió un inconveniente al comprobar el horario. Inténtalo de nuevo.');
+            return;
+        }
+
         updateBookingSummary();
     }
 
@@ -180,40 +222,67 @@ function selectBarber(barberName) {
     if (reservasSection) reservasSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Confirmar reserva e integrar con WhatsApp
-function confirmBooking(event) {
+// Confirmar reserva final y guardar en Firestore
+async function confirmBooking(event) {
     event.preventDefault();
 
     const nameInput = document.getElementById('client-name');
     const phoneInput = document.getElementById('client-phone');
 
     if (!nameInput || !phoneInput || !nameInput.value.trim() || !phoneInput.value.trim()) {
-        alert('Por favor ingresa tu nombre y teléfono de contacto.');
+        showCustomModal('Datos Incompletos', 'Por favor ingresa tu nombre completo y teléfono de contacto.');
         return;
     }
 
     bookingData.clientName = nameInput.value.trim();
     bookingData.clientPhone = phoneInput.value.trim();
 
-    // Rellenar pantalla de éxito
-    document.getElementById('suc-name').textContent = bookingData.clientName;
-    document.getElementById('suc-services').textContent = bookingData.services.join(', ');
-    document.getElementById('suc-barber').textContent = bookingData.barber;
-    document.getElementById('suc-datetime').textContent = `${bookingData.date} a las ${bookingData.time}`;
-    document.getElementById('suc-price').textContent = `$${bookingData.price.toFixed(2)}`;
+    const submitBtn = document.getElementById('submit-booking-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Guardando reserva...";
 
-    // Construir mensaje detallado para WhatsApp
-    const servicesListStr = bookingData.services.join(', ');
-    const whatsappMessage = `¡Hola Mendez Barber! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicios:* ${servicesListStr}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Monto Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
-    
-    const whatsappUrl = `https://wa.me/584128674324?text=${whatsappMessage}`;
-    const whatsappBtn = document.getElementById('whatsapp-btn');
-    if (whatsappBtn) whatsappBtn.setAttribute('href', whatsappUrl);
+    try {
+        const db = window.db;
+        const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js");
 
-    document.getElementById('booking-form').classList.add('hidden');
-    const successScreen = document.getElementById('success-screen');
-    successScreen.classList.remove('hidden');
-    successScreen.scrollIntoView({ behavior: 'smooth' });
+        // Guardar la cita directamente (ya fue verificada en el paso anterior)
+        await addDoc(collection(db, "citas"), {
+            barber: bookingData.barber,
+            date: bookingData.date,
+            time: bookingData.time,
+            clientName: bookingData.clientName,
+            clientPhone: bookingData.clientPhone,
+            services: bookingData.services,
+            totalPrice: bookingData.price,
+            createdAt: new Date().toISOString()
+        });
+
+        // Rellenar pantalla de éxito
+        document.getElementById('suc-name').textContent = bookingData.clientName;
+        document.getElementById('suc-services').textContent = bookingData.services.join(', ');
+        document.getElementById('suc-barber').textContent = bookingData.barber;
+        document.getElementById('suc-datetime').textContent = `${bookingData.date} a las ${bookingData.time}`;
+        document.getElementById('suc-price').textContent = `$${bookingData.price.toFixed(2)}`;
+
+        // Construir mensaje detallado para WhatsApp
+        const servicesListStr = bookingData.services.join(', ');
+        const whatsappMessage = `¡Hola Mendez Barber! 💈%0A%0AQuiero confirmar mi cita con los siguientes datos:%0A- *Cliente:* ${bookingData.clientName}%0A- *Teléfono:* ${bookingData.clientPhone}%0A- *Servicios:* ${servicesListStr}%0A- *Barbero:* ${bookingData.barber}%0A- *Fecha y Hora:* ${bookingData.date} a las ${bookingData.time}%0A- *Monto Total:* $${bookingData.price.toFixed(2)}%0A%0A¡Quedo atento a su confirmación!`;
+        
+        const whatsappUrl = `https://wa.me/584128674324?text=${whatsappMessage}`;
+        const whatsappBtn = document.getElementById('whatsapp-btn');
+        if (whatsappBtn) whatsappBtn.setAttribute('href', whatsappUrl);
+
+        document.getElementById('booking-form').classList.add('hidden');
+        const successScreen = document.getElementById('success-screen');
+        successScreen.classList.remove('hidden');
+        successScreen.scrollIntoView({ behavior: 'smooth' });
+
+    } catch (error) {
+        console.error("Error al guardar la cita en Firebase: ", error);
+        showCustomModal('Error de Conexión', 'Ocurrió un inconveniente al registrar la cita. Por favor intenta de nuevo.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Confirmar y Reservar Cita";
+    }
 }
 
 // Reiniciar formulario de reserva
