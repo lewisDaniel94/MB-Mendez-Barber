@@ -8,15 +8,15 @@
     --card-bg: #121215;
 }
 
-/* Control estricto para evitar desbordes y zoom lateral en móviles */
-* {
+/* Control estricto absoluto para cortar cualquier desborde horizontal en móviles */
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
 html {
     width: 100%;
     height: 100%;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
     scroll-behavior: smooth;
 }
 
@@ -26,18 +26,30 @@ body {
     color: #e5e7eb;
     width: 100%;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
     -webkit-text-size-adjust: 100%;
+    position: relative;
 }
 
 h1, h2, h3, h4, .font-serif {
     font-family: 'Cinzel', 'Playfair Display', serif;
 }
 
-/* Asegurar que las imágenes no desborden la pantalla */
-img {
+/* Blindaje de imágenes y contenedores para que nunca rompan el ancho de la pantalla */
+img, video, canvas {
     max-width: 100%;
+    height: auto;
     display: block;
+}
+
+/* Forzar que los contenedores principales de Tailwind respeten el ancho de la pantalla móvil */
+.max-w-7xl, .max-w-5xl, .max-w-4xl {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
 /* Texto Gradiente Dorado */
