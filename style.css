@@ -8,14 +8,36 @@
     --card-bg: #121215;
 }
 
+/* Control estricto para evitar desbordes y zoom lateral en móviles */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     background-color: var(--dark-bg);
     color: #e5e7eb;
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
 }
 
 h1, h2, h3, h4, .font-serif {
     font-family: 'Cinzel', 'Playfair Display', serif;
+}
+
+/* Asegurar que las imágenes no desborden la pantalla */
+img {
+    max-width: 100%;
+    display: block;
 }
 
 /* Texto Gradiente Dorado */
@@ -42,6 +64,7 @@ h1, h2, h3, h4, .font-serif {
 .card-gold-glow {
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
     transition: all 0.3s ease;
+    width: 100%;
 }
 
 .card-gold-glow:hover {
